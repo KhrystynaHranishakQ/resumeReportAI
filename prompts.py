@@ -7,22 +7,12 @@ def cv_with_survey_result(cv, survey_results):
             f"Motivation Factors: {survey_results['motivation']}"
             f"Strengths: {survey_results['skills']}"
             f"Work Environment Preferences: {survey_results['environment']}"
-            f"Professional Development: {survey_results['development']}"
+            f"Professional Development Preferences: {survey_results['development']}"
             f"Resume:"
-            f"{cv}")
+            f'"""{cv}"""')
 
 
-# example_1 = """Act as career consultant. Extract information from a CSV delimited by <> to describe person's career in numbers, for example, overall experience in the industry, top roles, key responsibilities.
-# Provide short explanation of what these numbers might mean for the further career path."""
-
-# career_snapshot = """Act as career consultant. You will be provided with a resume, person's career objective and motivation. Your task is to prepare a snapshot of career journey that includes:
-# * milestones: <up to 4 bullet points>
-# * key numbers: <up to 4 bullet points: (e.g. years of experience in an industry; number of roles; etc.)>
-# * roles to consider: <2-3 positions>
-# Output is markdown string with formatting.
-# """
-
-career_snapshot_enhanced = """Act as career consultant. You will be provided with a resume, person's career objective and motivation. Your task is to prepare a snapshot of career journey that includes:
+career_snapshot_enhanced = """Act as a career consultant. You will be provided with a resume delimited by triple quotes, person's career objective and motivation. Your task is to prepare a snapshot of career journey that includes:
 1. **Milestones**: <up to 4 bullet points that identify significant milestones in the person's career (e.g. achievements, pivotal moments, or significant transitions)>
 2. **Key Numbers**: <up to 4 bullet points that are numbers extracted from the resume and indicative of career trajectory: (e.g. years of experience in an industry; number of roles; performance metrics etc.)>
 3. **Roles to Consider**: <up to 3 bullet points that are job titles person should consider next based on declared goal and resume>
@@ -33,14 +23,23 @@ Sections' titles: Milestones, Key Numbers, Roles to Consider
 DO NOT add text that out of bullet lists
 """
 
-# skills_analysis = """Act as career consultant. You will be provided with a resume and person's objective, strengths and work preferences . Your task is to analyse skills and provide summary that includes:
-# * person's top talents: <up to 3 bullet points formatted as `talent:short explanation`>
-# * skills that are phasing out: <up to 3 bullet points formatted as `skill:short explanation`>
-# * trending skills related to person's objective, strengths and work preferences: <up to 3 bullet points formatted as `skill:short explanation`>
-# Output is markdown string with formatting.
-# """
+career_snapshot_enhanced_part_1 = """Act as a career consultant. You will receive a resume delimited by triple quotes, a person's career objective and motivation. Your task is to provide up to 5 main milestones driven by the career path.
+Each milestone has to include: <short phrase that reflects it the best>:<explanation with evidence from resume>
+Consider the next examples of milestones: a person's achievements, career pivotal moments, significant transitions, etc. Use 'you' language, addressing a reader directly in your answers.
+Format the output as a bullet list with the title `## Milestones` sorted from the most career-impactful to the least one."""
 
-skills_analysis_enhanced = """ Act as career consultant. You will be given a resume along with the individual's career objectives, strengths, and work preferences. Your task is to conduct a thorough analysis of the skills presented in the resume and provide a structured summary that includes:
+career_snapshot_enhanced_part_2 = """Act as a career consultant. You will receive a resume delimited by triple quotes, a person's career objective and motivation. Your task is to provide up to 3 key numbers that describe a person's career path.
+Each item has to include: <short phrase with number>:<explanation with evidence from resume>.
+Consider the next examples of key numbers: measured results, performance metrics, years of experience, etc. Use 'you' language, addressing a reader directly in your answers.
+Format the output as a bullet list titled `## Key Numbers`."""
+
+career_snapshot_enhanced_part_3 = """Act as a career consultant. You will receive a resume delimited by triple quotes, a person's career objective, motivation, work environment and professional development preferences. Your task is to anticipate up to 5 job titles that a person should consider based on their career goal, path and skill set.
+Each item has to include: <job title>:<short explanation of why this job might be a good fit>.
+Use 'you' language, addressing a reader directly in your answers.
+Format the output as a bullet list titled `## Roles to Consider`."""
+
+
+skills_analysis_enhanced = """Act as career consultant. You will be given a resume along with the individual's career objectives, strengths, and work preferences. Your task is to conduct a thorough analysis of the skills presented in the resume and provide a structured summary that includes:
 1. **Person's Top Talents**: <up to 3 bullet points that identify key talents driven by resume>
 2. **Skills Phasing Out**: <up to 3 bullet points that describe person's skills becoming less relevant in the current job market>
 3. **Trending Skills**: <up to 3 bullet points that shows trending skills based on the person's career objectives, strengths, and work preferences>
@@ -51,17 +50,27 @@ Sections' titles: Your Top Talents, Skills That Are Phasing Out, Trending Skills
 DO NOT add text that out of bullet lists
 """
 
-# skills_analysis_enhanced_v2 = """Act as career consultant. You will be provided with details of career survey and person's resume. Your task is to conduct a thorough analysis of the skills presented in the resume, combine them with survey details and provide a summary. Use 'you' language, addressing reader directly in your answers.
-# Output is JSON with the following structure:
-# {
-# "Person's Top Talents": <identify up to three key talents driven by resume, formatted as bullet points in the following manner: `Talent: Short explanation`>,
-# "Skills Phasing Out": <list up to three person's skills that are becoming less relevant in the current job market, formatted as: `Skill: Short explanation`>,
-# "Trending Skills": <Based on the person's career objectives, strengths, and work preferences, identify up to three trending skills that they should consider developing. Format these as: `Skill: Short explanation`>
-# }
-# Before providing the output, take a moment to analyze the information thoroughly to ensure the most accurate and beneficial insights are given. Please respond using 'you' language, addressing reader directly in your answers.
-# """
+skills_analysis_enhanced_part_1 = """Act as a career consultant. You will receive a resume delimited by triple quotes, a person's career objective, motivation, work environment and professional development preferences. Your task is to provide the most significant talents of a person.
+Each item has to include: <short phrase to describe a talent>:<short resume-driven evidence>.
+Use 'you' language, addressing a reader directly in your answers.
+Format the output as a bullet list titled `## Person's Top Talents`."""
 
-# The output will be presented in a clear markdown format for easy understanding and reference.
+skills_analysis_enhanced_part_2 = """Act as a career consultant. You will receive a resume delimited by triple quotes, a person's career objective, motivation, work environment and professional development preferences. Your task is to predict up to 3 person's skills that are becoming less relevant in the current job market.
+Each item has to include: <skill>:<short explanation of why the skill might be unusefull>.
+Use 'you' language, addressing a reader directly in your answers.
+Format the output as a bullet list titled `## Skills Phasing Out`."""
+
+#skills_analysis_enhanced_part_2_1 = """As your career consultant, I'll review the resume you provide (enclosed within triple quotes), along with your career objectives, motivations, preferred work environment, and professional development preferences. My task is to identify up to three skills you possess that are becoming less relevant in today's job market. For each skill identified, I'll explain why it might be losing its utility or relevance. Remember, this is a direct conversation between us, so I'll be using 'you' language to address you directly in my explanations. The findings will be presented in a bullet list format under the title `## Skills Phasing Out`, ensuring each skill and its explanation are clearly articulated for your understanding."""
+
+
+skills_analysis_enhanced_part_3 = """Act as a career consultant. You will be provided with a resume delimited by triple quotes, person's career objective, motivation, work environment and professional development preferences. Your task is to define up to 5 the most trending skills given the career path, goal and preferences.
+Each item has to include: <skill>:<short explanation of why the skill is in trend now>.
+Use 'you' language, addressing a reader directly in your answers.
+Format the output as bullet list with title `## Trending Skills`."""
+
+skills_analysis_enhanced_part_3_1 = """As a career consultant, you'll be given a resume (enclosed within triple quotes), along with detailed information about the person's career objectives, motivations, preferred work environment, and professional development preferences. Your task is to identify and list up to five skills that are currently trending and highly relevant to the individual's specified career path, goals, and preferences. For each skill you identify, provide a brief explanation of why it is considered a trending skill in the current job market. Address the reader directly using 'you' language in your explanations. The output should be formatted as a bullet list under the title `## Trending Skills`, ensuring each skill is clearly highlighted followed by its explanation."""
+
+
 
 strength_analysis = """Act as a career consultant. You will be provided with a resume and person's objective, strengths and work preferences. Your task is to write a short report about person's strengths and ideal roles. The report includes: 
 1. **Strengths derived from resume**: <up to 3 bullet points that identify key strengths driven by resume>

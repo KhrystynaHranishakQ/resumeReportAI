@@ -7,6 +7,7 @@ import time
 
 load_dotenv()
 client = OpenAI()
+MODEL = "gpt-4-1106-preview"
 
 
 def parse_file(file):
@@ -18,10 +19,10 @@ def parse_file(file):
 
 def prepare_career_snapshot(cv_text, obj, motivation):
     completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model=MODEL,
         messages=[
             {"role": "system",
-             "content": prompts.career_snapshot_enhanced},
+             "content": prompts.career_snapshot_enhanced_part_1},
             {"role": "user", "content": prompts.cv_with_objective(cv_text, obj, motivation)}
         ]
     )
@@ -29,12 +30,38 @@ def prepare_career_snapshot(cv_text, obj, motivation):
     return report
 
 
-def prepare_skills_analysis(cv_text, survey_result):
+def prepare_career_snapshot_part2(cv_text, obj, motivation):
     completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model=MODEL,
         messages=[
             {"role": "system",
-             "content": prompts.skills_analysis_enhanced},
+             "content": prompts.career_snapshot_enhanced_part_2},
+            {"role": "user", "content": prompts.cv_with_objective(cv_text, obj, motivation)}
+        ]
+    )
+    report = completion.choices[0].message.content
+    return report
+
+
+def prepare_career_snapshot_part3(cv_text, survey_result):
+    completion = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system",
+             "content": prompts.career_snapshot_enhanced_part_3},
+            {"role": "user", "content": prompts.cv_with_survey_result(cv_text, survey_result)}
+        ]
+    )
+    report = completion.choices[0].message.content
+    return report
+
+
+def prepare_skills_analysis(system_prompt, cv_text, survey_result):
+    completion = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system",
+             "content": system_prompt},
             {"role": "user", "content": prompts.cv_with_survey_result(cv_text, survey_result)}
         ]
     )
@@ -44,7 +71,7 @@ def prepare_skills_analysis(cv_text, survey_result):
 
 def prepare_strength_analysis(cv_text, survey_result):
     completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model=MODEL,
         messages=[
             {"role": "system",
              "content": prompts.strength_analysis},
@@ -88,10 +115,18 @@ def main():
         st.session_state.survey = {}
     if 'upload_file' not in st.session_state:
         st.session_state.resume = None
-    if 'snapshot' not in st.session_state:
-        st.session_state.snapshot = None
-    if 'skills' not in st.session_state:
-        st.session_state.skills = None
+    if 'snapshot_part1' not in st.session_state:
+        st.session_state.snapshot_part1 = None
+    if 'snapshot_part2' not in st.session_state:
+        st.session_state.snapshot_part2 = None
+    if 'snapshot_part3' not in st.session_state:
+        st.session_state.snapshot_part3 = None
+    if 'skills_part1' not in st.session_state:
+        st.session_state.skills_part1 = None
+    if 'skills_part2' not in st.session_state:
+        st.session_state.skills_part2 = None
+    if 'skills_part3' not in st.session_state:
+        st.session_state.skills_part3 = None
     if 'strength' not in st.session_state:
         st.session_state.strength = None
 
@@ -161,17 +196,30 @@ def main():
             st.success("Thank you for the response! Analysing...")
             st.session_state.resume = parse_file(uploaded_file)
             # get career snapshot from GPT
-            st.session_state.snapshot = prepare_career_snapshot(st.session_state.resume, st.session_state.survey["goal"],
-                                               st.session_state.survey["motivation"])
+            st.session_state.snapshot_part1 = prepare_career_snapshot(st.session_state.resume, st.session_state.survey["goal"],
+                                                                      st.session_state.survey["motivation"])
+            st.session_state.snapshot_part2 = prepare_career_snapshot_part2(st.session_state.resume,
+                                                                      st.session_state.survey["goal"],
+                                                                      st.session_state.survey["motivation"])
+            st.session_state.snapshot_part3 = prepare_career_snapshot_part3(st.session_state.resume,
+                                                                            st.session_state.survey)
             # get skill analysis
-            st.session_state.skills = prepare_skills_analysis(st.session_state.resume, st.session_state.survey)
+            st.session_state.skills_part1 = prepare_skills_analysis(prompts.skills_analysis_enhanced_part_1,
+                                                                    st.session_state.resume, st.session_state.survey)
+            st.session_state.skills_part2 = prepare_skills_analysis(prompts.skills_analysis_enhanced_part_2,
+                                                                    st.session_state.resume, st.session_state.survey)
+            st.session_state.skills_part3 = prepare_skills_analysis(prompts.skills_analysis_enhanced_part_3_1,
+                                                                    st.session_state.resume, st.session_state.survey)
             # get strength analysis
-            st.session_state.strength = prepare_strength_analysis(st.session_state.resume, st.session_state.survey)
+            #st.session_state.strength = prepare_strength_analysis(st.session_state.resume, st.session_state.survey)
             set_state(2)
 
     if st.session_state.stage >= 2:
         st.title(":violet[Career Report]")
-        st.markdown(st.session_state.snapshot)
+        st.markdown("# Snapshot of Your Career Journey")
+        st.markdown(st.session_state.snapshot_part1)
+        st.markdown(st.session_state.snapshot_part2)
+        st.markdown(st.session_state.snapshot_part3)
         st.info("Do you like the response?")
         col1, col2 = st.columns(2)
         with col1:
@@ -185,8 +233,10 @@ def main():
             print('dislike')
         if comment_snapshot:
             print(comment_snapshot)
-
-        st.markdown(st.session_state.skills)
+        st.markdown("# Analyzing Your Skills")
+        st.markdown(st.session_state.skills_part1)
+        st.markdown(st.session_state.skills_part2)
+        st.markdown(st.session_state.skills_part3)
         st.info("Do you like the response?")
         col1, col2 = st.columns(2)
         with col1:
