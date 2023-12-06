@@ -1,9 +1,9 @@
 import os
 import json
 import psycopg2
-from dotenv import load_dotenv
-
-load_dotenv()
+# from dotenv import load_dotenv
+#
+# load_dotenv()
 
 
 def get_db_connection():
@@ -22,65 +22,66 @@ def get_db_connection():
 
 def insert_analysis_data(survey,
                          parsed_cv_data,
-                         career_snapshot_milestones,
-                         career_snapshot_key_numbers,
-                         career_snapshot_roles,
-                         skills_analysis_talents,
-                         skills_analysis_skill_phasing_out,
-                         skills_analysis_skill_trending,
-                         strength_analysis_strengths):
+                         gpt_responses):
     conn = get_db_connection()
-    cur = conn.cursor()
+    cv_id = None
+    if conn:
+        cur = conn.cursor()
 
-    cur.execute("""
-        INSERT INTO career_data (survey, parsed_resume, career_milestones, career_key_numbers,career_roles, skills_analisys_talents, skills_analysis_skill_phasing_out, skills_analysis_skill_trending, strength_analysis_strengths)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;
-    """, (
-        json.dumps(survey),
-        parsed_cv_data,
-        career_snapshot_milestones,
-        career_snapshot_key_numbers,
-        career_snapshot_roles,
-        skills_analysis_talents,
-        skills_analysis_skill_phasing_out,
-        skills_analysis_skill_trending,
-        strength_analysis_strengths
-    )
-                )
+        cur.execute("""
+            INSERT INTO career_data (survey, parsed_resume, career_milestones, career_key_numbers,career_roles, skills_analisys_talents, skills_analysis_skill_phasing_out, skills_analysis_skill_trending, strength_analysis_strengths, strength_analysis_higher_position, strength_analysis_optimal_position)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;
+        """, (
+            json.dumps(survey),
+            parsed_cv_data,
+            gpt_responses.milestones,
+            gpt_responses.key_numbers,
+            gpt_responses.roles,
+            gpt_responses.talents,
+            gpt_responses.skill_phasing_out,
+            gpt_responses.skill_trending,
+            gpt_responses.strengths,
+            gpt_responses.higher_positions,
+            gpt_responses.optimal_positions
+        )
+                    )
 
-    cv_id = cur.fetchone()[0]
-    conn.commit()
+        cv_id = cur.fetchone()[0]
+        conn.commit()
 
-    cur.close()
-    conn.close()
+        cur.close()
+        conn.close()
+    else:
+        raise ConnectionError()
 
     return cv_id
 
 
 def update_feedback(record_id, feedback_dict, like_column, comment_column):
     conn = get_db_connection()
-    cur = conn.cursor()
+    if conn and record_id:
+        cur = conn.cursor()
 
-    if feedback_dict['like']:
-        cur.execute(f"""
-            UPDATE career_data 
-            SET {like_column} = %s
-            WHERE id = %s;
-        """, (True, record_id))
-    if feedback_dict['dislike']:
-        cur.execute(f"""
-            UPDATE career_data 
-            SET {like_column} = %s
-            WHERE id = %s;
-        """, (False, record_id))
-    if feedback_dict['comment']:
-        cur.execute(f"""
-                    UPDATE career_data 
-                    SET {comment_column} = %s 
-                    WHERE id = %s;
-                """, (feedback_dict['comment'], record_id))
+        if feedback_dict['like']:
+            cur.execute(f"""
+                UPDATE career_data 
+                SET {like_column} = %s
+                WHERE id = %s;
+            """, (True, record_id))
+        if feedback_dict['dislike']:
+            cur.execute(f"""
+                UPDATE career_data 
+                SET {like_column} = %s
+                WHERE id = %s;
+            """, (False, record_id))
+        if feedback_dict['comment']:
+            cur.execute(f"""
+                        UPDATE career_data 
+                        SET {comment_column} = %s 
+                        WHERE id = %s;
+                    """, (feedback_dict['comment'], record_id))
 
-    conn.commit()
-    cur.close()
-    conn.close()
+        conn.commit()
+        cur.close()
+        conn.close()
 

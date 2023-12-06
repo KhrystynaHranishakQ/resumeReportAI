@@ -1,11 +1,27 @@
+import os
+
 from tika import parser
 from openai import OpenAI
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
+#
+# load_dotenv()
 
-load_dotenv()
-
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 MODEL = "gpt-4-1106-preview"
 client = OpenAI()
+
+
+class GPTResults:
+    def __init__(self):
+        self.milestones = None
+        self.key_numbers = None
+        self.roles = None
+        self.talents = None
+        self.skill_phasing_out = None
+        self.skill_trending = None
+        self.strengths = None
+        self.higher_positions = None
+        self.optimal_positions = None
 
 
 def parse_file(file):

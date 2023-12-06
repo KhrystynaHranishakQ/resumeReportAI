@@ -1,12 +1,12 @@
 import streamlit as st
-
+import concurrent.futures
 import database_module
 import prompts
 import utils
 import survey_questions
 
 
-def set_state(i):
+def set_state_stage(i):
     st.session_state.stage = i
 
 
@@ -17,10 +17,10 @@ def validate_survey_responses(survey):
             is_valid = False
 
     if is_valid:
-        set_state(1)
+        set_state_stage(1)
         st.session_state.survey = survey
     else:
-        set_state(-1)
+        set_state_stage(-1)
 
 
 def get_feedback(like_button_key,
@@ -33,12 +33,12 @@ def get_feedback(like_button_key,
     st.info("Do you like the response?")
     col1, col2 = st.columns(2)
     with col1:
-        like_1 = st.button(label="YES :+1:", key=like_button_key, on_click=set_state, args=[2])
+        like_1 = st.button(label="YES :+1:", key=like_button_key, on_click=set_state_stage, args=[2])
     with col2:
-        dislike_1 = st.button(label="NO :-1:", key=dislike_button_key, on_click=set_state, args=[2])
+        dislike_1 = st.button(label="NO :-1:", key=dislike_button_key, on_click=set_state_stage, args=[2])
     comment_snapshot = st.text_input("Please leave more detailed feedback to help us make response more accurate",
                                      key=comment_key,
-                                     on_change=set_state, args=[2])
+                                     on_change=set_state_stage, args=[2])
     if like_1:
         response["like"] = True
     if dislike_1:
@@ -50,28 +50,19 @@ def get_feedback(like_button_key,
 
 
 def main():
+
+    gpt_response = utils.GPTResults()
+
     if 'stage' not in st.session_state:
         st.session_state.stage = 0
     if 'record_id' not in st.session_state:
         st.session_state.record_id = None
     if 'survey' not in st.session_state:
         st.session_state.survey = {}
-    if 'upload_file' not in st.session_state:
+    if 'resume' not in st.session_state:
         st.session_state.resume = None
-    if 'career_snapshot_milestones' not in st.session_state:
-        st.session_state.career_snapshot_milestones = None
-    if 'career_snapshot_key_numbers' not in st.session_state:
-        st.session_state.career_snapshot_key_numbers = None
-    if 'career_snapshot_roles' not in st.session_state:
-        st.session_state.career_snapshot_roles = None
-    if 'skills_analysis_talents' not in st.session_state:
-        st.session_state.skills_analysis_talents = None
-    if 'skills_analysis_skill_phasing_out' not in st.session_state:
-        st.session_state.skills_analysis_skill_phasing_out = None
-    if 'skills_analysis_skill_trending' not in st.session_state:
-        st.session_state.skills_analysis_skill_trending = None
-    if 'strength_analysis_strengths' not in st.session_state:
-        st.session_state.strength_analysis_strengths = None
+    if 'gpt_responses' not in st.session_state:
+        st.session_state.gpt_responses = gpt_response
 
     if st.session_state.stage == 0:
         st.title(":violet[Career Consultation Survey]")
@@ -105,7 +96,7 @@ def main():
     if st.session_state.stage == -1:
         st.title(":violet[Career Consultation Survey]")
         st.error('Please answer all questions')
-        st.button('Start Over', on_click=set_state, args=[0])
+        st.button('Start Over', on_click=set_state_stage, args=[0])
 
     if st.session_state.stage == 1:
         st.title(":violet[Career Consultation Survey]")
@@ -118,55 +109,55 @@ def main():
             st.success(
                 "Thank you for the response! The analysis is started. Please be patient this might take a little while.")
             st.session_state.resume = utils.parse_file(uploaded_file)
+            print(st.session_state.resume)
+            print(st.session_state.survey)
 
-            # get career snapshot from GPT
-            user_prompt = utils.get_cv_with_survey_result(st.session_state.resume, st.session_state.survey)
-            st.session_state.career_snapshot_milestones = utils.get_gpt_response(prompts.career_snapshot_milestones,
-                                                                                 user_prompt)
-            print('Milestones: Done')
-            st.session_state.career_snapshot_key_numbers = utils.get_gpt_response(prompts.career_snapshot_key_numbers,
-                                                                                  user_prompt)
-            print('Key numbers: Done')
-            st.session_state.career_snapshot_roles = utils.get_gpt_response(prompts.career_snapshot_roles,
-                                                                            user_prompt)
-            print('Roles: Done')
+            user_prompt_cv_with_survey = utils.get_cv_with_survey_result(st.session_state.resume,
+                                                                         st.session_state.survey)
+            user_prompt_cv = utils.get_cv(st.session_state.resume)
 
-            # get skill analysis from GPT
-            st.session_state.skills_analysis_talents = utils.get_gpt_response(prompts.skills_analysis_talents,
-                                                                              user_prompt)
-            print('Talents: Done')
-            st.session_state.skills_analysis_skill_phasing_out = utils.get_gpt_response(
-                prompts.skills_analysis_skill_phasing_out,
-                user_prompt)
-            print('Skills phasing out: Done')
-            st.session_state.skills_analysis_skill_trending = utils.get_gpt_response(
-                prompts.skills_analysis_skill_trending,
-                user_prompt)
-            print('Skills trending: Done')
+            # Parallel execution of calls to GPT
+            print('Parallel execution is started...')
+            tasks = {
+                'milestones': (prompts.career_snapshot_milestones, user_prompt_cv_with_survey, 'milestones'),
+                'key_numbers': (prompts.career_snapshot_key_numbers, user_prompt_cv_with_survey, 'key_numbers'),
+                'roles': (prompts.career_snapshot_roles, user_prompt_cv_with_survey, 'roles'),
 
-            # get strength analysis from GPT
-            st.session_state.strength_analysis_strengths = utils.get_gpt_response(
-                prompts.strength_analysis_strengths,
-                utils.get_cv(st.session_state.resume))
-            print('Strengths: Done')
+                'talents': (prompts.skills_analysis_talents, user_prompt_cv_with_survey, 'talents'),
+                'skill_phasing_out': (prompts.skills_analysis_skill_phasing_out, user_prompt_cv_with_survey, 'skill_phasing_out'),
+                'skill_trending': (prompts.skills_analysis_skill_trending, user_prompt_cv_with_survey, 'skill_trending'),
 
+                'strengths': (prompts.strength_analysis_strengths, user_prompt_cv, 'strengths'),
+                'higher_positions': (prompts.strength_analysis_higher_positions, user_prompt_cv, 'higher_positions'),
+                'optimal_positions': (prompts.strength_analysis_optimal_positions, user_prompt_cv_with_survey, 'optimal_positions')
+            }
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future_to_id = {executor.submit(utils.get_gpt_response, task[0], task[1]): task_id for task_id, task in
+                                tasks.items()}
+
+                for future in concurrent.futures.as_completed(future_to_id):
+                    task_id = future_to_id[future]
+                    attribute_name = tasks[task_id][2]
+                    try:
+                        data = future.result()
+                        setattr(gpt_response, attribute_name, data)
+                        print(f'{task_id}: Done')
+                    except Exception as exc:
+                        print(f'{task_id} generated an exception: {exc}')
+            print('Parallel execution is finished.')
+            st.session_state.gpt_responses = gpt_response
+            print(gpt_response.optimal_positions)
             # save to db
             st.session_state.record_id = database_module.insert_analysis_data(st.session_state.survey,
                                                                               st.session_state.resume,
-                                                                              st.session_state.career_snapshot_milestones,
-                                                                              st.session_state.career_snapshot_key_numbers,
-                                                                              st.session_state.career_snapshot_roles,
-                                                                              st.session_state.skills_analysis_talents,
-                                                                              st.session_state.skills_analysis_skill_phasing_out,
-                                                                              st.session_state.skills_analysis_skill_trending,
-                                                                              st.session_state.strength_analysis_strengths)
-            set_state(2)
+                                                                              st.session_state.gpt_responses)
+            set_state_stage(2)
     # visualization
     if st.session_state.stage >= 2:
         st.title(":violet[Career Report]")
 
         st.markdown("# Snapshot of Your Career Journey")
-        st.markdown(st.session_state.career_snapshot_milestones)
+        st.markdown(st.session_state.gpt_responses.milestones)
         milestone_feedback = get_feedback('yes_1',
                                           'no_1', 'comment_1')
         # save feedback to db
@@ -174,7 +165,7 @@ def main():
                                         milestone_feedback,
                                         'career_milestones_like',
                                         'career_milestones_comment')
-        st.markdown(st.session_state.career_snapshot_key_numbers)
+        st.markdown(st.session_state.gpt_responses.key_numbers)
         key_numbers_feedback = get_feedback('yes_2',
                                             'no_2', 'comment_2')
         # save feedback to db
@@ -183,7 +174,7 @@ def main():
                                         'career_key_numbers_like',
                                         'career_key_numbers_comment')
 
-        st.markdown(st.session_state.career_snapshot_roles)
+        st.markdown(st.session_state.gpt_responses.roles)
         roles_feedback = get_feedback('yes_3',
                                       'no_3', 'comment_3')
         # save feedback to db
@@ -193,7 +184,7 @@ def main():
                                         'career_roles_comment')
 
         st.markdown("# Analyzing Your Skills")
-        st.markdown(st.session_state.skills_analysis_talents)
+        st.markdown(st.session_state.gpt_responses.talents)
         talents_feedback = get_feedback('yes_4',
                                       'no_4', 'comment_4')
         # save feedback to db
@@ -202,7 +193,7 @@ def main():
                                         'skills_analisys_talents_like',
                                         'skills_analisys_talents_comment')
 
-        st.markdown(st.session_state.skills_analysis_skill_phasing_out)
+        st.markdown(st.session_state.gpt_responses.skill_phasing_out)
         skill_phasing_out_feedback = get_feedback('yes_5',
                                         'no_5', 'comment_5')
         # save feedback to db
@@ -211,7 +202,7 @@ def main():
                                         'skills_analysis_skill_phasing_out_like',
                                         'skills_analysis_skill_phasing_out_comment')
 
-        st.markdown(st.session_state.skills_analysis_skill_trending)
+        st.markdown(st.session_state.gpt_responses.skill_trending)
         skill_trending_feedback = get_feedback('yes_6',
                                                 'no_6', 'comment_6')
         # save feedback to db
@@ -221,7 +212,7 @@ def main():
                                         'skills_analysis_skill_trending_comment')
 
         st.markdown("# Your Strengths and Ideal Roles")
-        st.markdown(st.session_state.strength_analysis_strengths)
+        st.markdown(st.session_state.gpt_responses.strengths)
         strength_analysis_feedback = get_feedback('yes_7',
                                                   'no_7', 'comment_7')
         # save feedback to db
@@ -230,7 +221,25 @@ def main():
                                         'strength_analysis_strengths_like',
                                         'strength_analysis_strengths_comment')
 
-        st.button('Start Over', on_click=set_state, args=[0])
+        st.markdown(st.session_state.gpt_responses.higher_positions)
+        higher_positions_feedback = get_feedback('yes_8',
+                                                  'no_8', 'comment_8')
+        # save feedback to db
+        database_module.update_feedback(st.session_state.record_id,
+                                        higher_positions_feedback,
+                                        'strength_analysis_higher_position_like',
+                                        'strength_analysis_higher_position_comment')
+
+        st.markdown(st.session_state.gpt_responses.optimal_positions)
+        optimal_positions_feedback = get_feedback('yes_9',
+                                                 'no_9', 'comment_9')
+        # save feedback to db
+        database_module.update_feedback(st.session_state.record_id,
+                                        optimal_positions_feedback,
+                                        'strength_analysis_optimal_position_like',
+                                        'strength_analysis_optimal_position_comment')
+
+        st.button('Start Over', on_click=set_state_stage, args=[0])
 
 
 if __name__ == "__main__":

@@ -1,6 +1,19 @@
 version: '3.8'
 
 services:
+  web:
+    build: .
+    ports:
+      - "8501:8501"
+    depends_on:
+      - db
+    environment:
+      - DB_NAME=postgres
+      - DB_USER=admin
+      - DB_PASSWORD=12345
+      - DB_HOST=db
+      - DB_PORT=5432
+      - OPENAI_API_KEY=<your_token>
   db:
     image: postgres:latest
     environment:
